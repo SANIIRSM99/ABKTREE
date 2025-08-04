@@ -1,129 +1,83 @@
 try {
-    let profiles = [];
-    let currentUser = "";
+    let profiles = JSON.parse(localStorage.getItem("profiles")) || [
+        {
+            name: "Hazrat Sultan Abulkhair Shah",
+            fatherName: "",
+            cnic: "ROOT001",
+            fatherCNIC: "",
+            bloodGroup: "O+",
+            phone: "",
+            address: "",
+            dob: "",
+            gender: "male",
+            status: "deceased",
+            deathDate: "1950-01-01",
+            note: "یہ حضرت علیؓ کے بیٹے حضرت عباسؓ کے شجرہ سے ہیں",
+            photo: ""
+        }
+    ];
+
+    let currentUser = localStorage.getItem("currentUser") || "";
     let currentMonth = new Date();
-    let fundsReceived = [];
-    let fundsUsed = [];
-    let currentBalance = 0;
+    let fundsReceived = JSON.parse(localStorage.getItem(getFundsKey("fundsReceived", currentMonth))) || [];
+    let fundsUsed = JSON.parse(localStorage.getItem(getFundsKey("fundsUsed", currentMonth))) || [];
+    let currentBalance = parseFloat(localStorage.getItem(getBalanceKey(currentMonth))) || 0;
 
-    const API_URL = 'https://github.com/SANIIRSM99/ABKTREE.git'; // Replace with your backend URL after deployment
+    // Generate localStorage key for funds by month-year
+    function getFundsKey(type, date) {
+        const month = date.getMonth() + 1; // 1-12
+        const year = date.getFullYear();
+        return `${type}_${year}-${month.toString().padStart(2, '0')}`;
+    }
 
-    // Fetch Profiles from Backend
-    async function fetchProfiles() {
+    // Generate localStorage key for balance by month-year
+    function getBalanceKey(date) {
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        return `balance_${year}-${month.toString().padStart(2, '0')}`;
+    }
+
+    // Save Profiles to LocalStorage
+    function saveProfiles() {
         try {
-            const response = await fetch(`${API_URL}/profiles`);
-            profiles = await response.json();
-            return profiles;
+            localStorage.setItem("profiles", JSON.stringify(profiles));
         } catch (e) {
-            console.error("Failed to fetch profiles:", e);
-            alert("Error fetching profiles. Check network or server status.");
-            return [];
+            console.error("Failed to save profiles to localStorage:", e);
+            alert("Error saving profiles. Check browser storage permissions.");
         }
     }
 
-    // Save Profile to Backend
-    async function saveProfileToBackend(profileData) {
+    // Save Funds and Balance to LocalStorage
+    function saveFunds() {
         try {
-            const response = await fetch(`${API_URL}/profiles`, {
-                method: profileData.editCnic ? 'POST' : 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-user': currentUser },
-                body: JSON.stringify(profileData)
-            });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message);
-            }
-            return await response.json();
+            localStorage.setItem(getFundsKey("fundsReceived", currentMonth), JSON.stringify(fundsReceived));
+            localStorage.setItem(getFundsKey("fundsUsed", currentMonth), JSON.stringify(fundsUsed));
+            localStorage.setItem(getBalanceKey(currentMonth), currentBalance.toFixed(2));
         } catch (e) {
-            console.error("Error saving profile:", e);
-            throw e;
-        }
-    }
-
-    // Delete Profile from Backend
-    async function deleteProfileFromBackend(cnic) {
-        try {
-            const response = await fetch(`${API_URL}/profiles/${cnic}`, {
-                method: 'DELETE',
-                headers: { 'x-user': currentUser }
-            });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message);
-            }
-            return await response.json();
-        } catch (e) {
-            console.error("Error deleting profile:", e);
-            throw e;
-        }
-    }
-
-    // Fetch Funds from Backend
-    async function fetchFunds(year, month) {
-        try {
-            const response = await fetch(`${API_URL}/funds/${year}/${month}`);
-            const data = await response.json();
-            fundsReceived = data.fundsReceived;
-            fundsUsed = data.fundsUsed;
-            currentBalance = calculateCurrentBalance();
-        } catch (e) {
-            console.error("Error fetching funds:", e);
-            alert("Error fetching funds: " + e.message);
-        }
-    }
-
-    // Save Funds to Backend
-    async function saveFundReceived(fundData) {
-        try {
-            const response = await fetch(`${API_URL}/funds/received`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(fundData)
-            });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message);
-            }
-            return await response.json();
-        } catch (e) {
-            console.error("Error saving fund received:", e);
-            throw e;
-        }
-    }
-
-    async function saveFundUsed(fundData) {
-        try {
-            const response = await fetch(`${API_URL}/funds/used`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(fundData)
-            });
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message);
-            }
-            return await response.json();
-        } catch (e) {
-            console.error("Error saving fund used:", e);
-            throw e;
+            console.error("Failed to save funds to localStorage:", e);
+            alert("Error saving funds. Check browser storage permissions.");
         }
     }
 
     // Show Duplicate Alert
     function showDuplicateAlert(msg) {
-        const alertBox = document.getElementById("duplicateAlert");
-        if (alertBox) {
-            alertBox.textContent = msg;
-            alertBox.style.display = "block";
-            setTimeout(() => (alertBox.style.display = "none"), 5000);
-        } else {
-            console.error("Duplicate alert box not found in DOM");
-            alert("Duplicate alert box not found!");
+        try {
+            const alertBox = document.getElementById("duplicateAlert");
+            if (alertBox) {
+                alertBox.textContent = msg;
+                alertBox.style.display = "block";
+                setTimeout(() => (alertBox.style.display = "none"), 5000);
+            } else {
+                console.error("Duplicate alert box not found in DOM");
+                alert("Duplicate alert box not found!");
+            }
+        } catch (e) {
+            console.error("Error showing duplicate alert:", e);
         }
     }
 
     // LOGIN
-    async function login() {
+    function login() {
         try {
             const user = document.getElementById("username")?.value.trim();
             const pass = document.getElementById("password")?.value.trim();
@@ -135,26 +89,18 @@ try {
                 return;
             }
 
-            const response = await fetch(`${API_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: user, password: pass })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                currentUser = data.user;
+            if ((user === "Abk" && pass === "bastiabk") || (user === "cpabk" && pass === "985973abk")) {
+                currentUser = user;
                 localStorage.setItem("currentUser", currentUser);
                 document.getElementById("loginBox").style.display = "none";
                 document.getElementById("app").style.display = "block";
                 if (window.location.pathname.includes("funds.html")) {
-                    await renderFunds();
+                    renderFunds();
                 } else {
-                    await renderTree();
+                    renderTree();
                 }
             } else {
-                const error = await response.json();
-                errorBox.textContent = error.message;
+                errorBox.textContent = "Invalid Username or Password!";
             }
         } catch (e) {
             console.error("Login error:", e);
@@ -178,134 +124,177 @@ try {
 
     // FORM OPEN/CLOSE
     function openForm(fatherCnic = "") {
-        const formPanel = document.getElementById("formPanel");
-        const profileForm = document.getElementById("profileForm");
-        if (!formPanel || !profileForm) {
-            console.error("Form panel or profile form not found");
-            alert("Form elements missing!");
-            return;
-        }
-        formPanel.classList.add("active");
-        profileForm.reset();
-        document.getElementById("editCnic").value = "";
-        document.getElementById("fatherCnic").value = fatherCnic;
+        try {
+            const formPanel = document.getElementById("formPanel");
+            const profileForm = document.getElementById("profileForm");
+            if (!formPanel || !profileForm) {
+                console.error("Form panel or profile form not found");
+                alert("Form elements missing!");
+                return;
+            }
+            formPanel.classList.add("active");
+            profileForm.reset();
+            document.getElementById("editCnic").value = "";
+            document.getElementById("fatherCnic").value = fatherCnic;
 
-        if (fatherCnic) {
-            const father = profiles.find(p => p.cnic === fatherCnic);
-            if (father) document.getElementById("fatherName").value = father.name;
-        }
+            if (fatherCnic) {
+                const father = profiles.find(p => p.cnic === fatherCnic);
+                if (father) document.getElementById("fatherName").value = father.name;
+            }
 
-        document.getElementById("marriedSection").style.display = "none";
-        document.getElementById("spouseCnic").style.display = "none";
-        document.getElementById("spouseName").style.display = "none";
+            document.getElementById("marriedSection").style.display = "none";
+            document.getElementById("spouseCnic").style.display = "none";
+            document.getElementById("spouseName").style.display = "none";
+        } catch (e) {
+            console.error("Error opening form:", e);
+            alert("Error opening form: " + e.message);
+        }
     }
 
     function closeForm() {
-        const formPanel = document.getElementById("formPanel");
-        if (formPanel) formPanel.classList.remove("active");
+        try {
+            const formPanel = document.getElementById("formPanel");
+            if (formPanel) formPanel.classList.remove("active");
+        } catch (e) {
+            console.error("Error closing form:", e);
+        }
     }
 
     // PROFILE MODAL
     function showProfile(cnic) {
-        const p = profiles.find(p => p.cnic === cnic);
-        if (!p) {
-            console.error("Profile not found for CNIC:", cnic);
-            alert("Profile not found!");
-            return;
-        }
+        try {
+            const p = profiles.find(p => p.cnic === cnic);
+            if (!p) {
+                console.error("Profile not found for CNIC:", cnic);
+                alert("Profile not found!");
+                return;
+            }
 
-        const age = calculateAge(p.dob, p.status === "deceased" ? p.deathDate : null);
-        const eligible = isEligibleForVote(p);
-        const voteMsg = eligible ? `✔ Eligible to Vote` : `❌ Not Eligible`;
+            const age = calculateAge(p.dob, p.status === "deceased" ? p.deathDate : null);
+            const eligible = isEligibleForVote(p);
+            const voteMsg = eligible ? `✔ Eligible to Vote` : `❌ Not Eligible`;
 
-        const photoHTML = p.photo ? `<img src="${p.photo}" class="modal-photo">` : `<p style="text-align:center;color:#888;">No Photo</p>`;
+            const photoHTML = p.photo ? `<img src="${p.photo}" class="modal-photo">` : `<p style="text-align:center;color:#888;">No Photo</p>`;
 
-        const formattedDob = p.dob ? formatDMYDate(new Date(p.dob)) : "-";
-        const formattedDeathDate = p.deathDate && p.status === "deceased" ? formatDMYDate(new Date(p.deathDate)) : "";
+            const formattedDob = p.dob ? formatDMYDate(new Date(p.dob)) : "-";
+            const formattedDeathDate = p.deathDate && p.status === "deceased" ? formatDMYDate(new Date(p.deathDate)) : "";
 
-        const modalBody = `
-            ${photoHTML}
-            <p><b>Name:</b> ${p.name}</p>
-            <p><b>Father:</b> ${p.fatherName || "-"}</p>
-            <p><b>CNIC:</b> ${p.cnic}</p>
-            <p><b>Blood Group:</b> ${p.bloodGroup}</p>
-            <p><b>Phone:</b> ${p.phone || "-"}</p>
-            <p><b>Address:</b> ${p.address || "-"}</p>
-            <p><b>Date of Birth:</b> ${formattedDob}</p>
-            <p><b>Status:</b> ${p.status}</p>
-            ${formattedDeathDate ? `<p><b>Date of Death:</b> ${formattedDeathDate}</p>` : ""}
-            <p><b>Age:</b> ${age !== null ? age + " years" : "-"}</p>
-            <p style="color:${eligible ? 'green' : 'red'};"><b>Vote Status:</b> ${voteMsg}</p>
-            ${p.spouseName ? `<p><b>Spouse:</b> ${p.spouseName}</p>` : ""}
-            ${p.note ? `<p style="color:#005f73;font-weight:bold;">${p.note}</p>` : ""}
-        `;
-        const modal = document.getElementById("profileModal");
-        if (modal) {
-            document.getElementById("modalBody").innerHTML = modalBody;
-            modal.style.display = "flex";
-        } else {
-            console.error("Profile modal not found");
-            alert("Profile modal not found!");
+            const modalBody = `
+                ${photoHTML}
+                <p><b>Name:</b> ${p.name}</p>
+                <p><b>Father:</b> ${p.fatherName || "-"}</p>
+                <p><b>CNIC:</b> ${p.cnic}</p>
+                <p><b>Blood Group:</b> ${p.bloodGroup}</p>
+                <p><b>Phone:</b> ${p.phone || "-"}</p>
+                <p><b>Address:</b> ${p.address || "-"}</p>
+                <p><b>Date of Birth:</b> ${formattedDob}</p>
+                <p><b>Status:</b> ${p.status}</p>
+                ${formattedDeathDate ? `<p><b>Date of Death:</b> ${formattedDeathDate}</p>` : ""}
+                <p><b>Age:</b> ${age !== null ? age + " years" : "-"}</p>
+                <p style="color:${eligible ? 'green' : 'red'};"><b>Vote Status:</b> ${voteMsg}</p>
+                ${p.spouseName ? `<p><b>Spouse:</b> ${p.spouseName}</p>` : ""}
+                ${p.note ? `<p style="color:#005f73;font-weight:bold;">${p.note}</p>` : ""}
+            `;
+            const modal = document.getElementById("profileModal");
+            if (modal) {
+                document.getElementById("modalBody").innerHTML = modalBody;
+                modal.style.display = "flex";
+            } else {
+                console.error("Profile modal not found");
+                alert("Profile modal not found!");
+            }
+        } catch (e) {
+            console.error("Error showing profile:", e);
+            alert("Error showing profile: " + e.message);
         }
     }
 
     function closeModal() {
-        const modal = document.getElementById("profileModal");
-        if (modal) modal.style.display = "none";
+        try {
+            const modal = document.getElementById("profileModal");
+            if (modal) modal.style.display = "none";
+        } catch (e) {
+            console.error("Error closing modal:", e);
+        }
     }
 
     // Calculate Age
     function calculateAge(dob, deathDate = null) {
-        if (!dob) return null;
-        const birth = new Date(dob);
-        const endDate = deathDate ? new Date(deathDate) : new Date();
-        let age = endDate.getFullYear() - birth.getFullYear();
-        const m = endDate.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && endDate.getDate() < birth.getDate())) age--;
-        return age;
+        try {
+            if (!dob) return null;
+            const birth = new Date(dob);
+            const endDate = deathDate ? new Date(deathDate) : new Date();
+            let age = endDate.getFullYear() - birth.getFullYear();
+            const m = endDate.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && endDate.getDate() < birth.getDate())) age--;
+            return age;
+        } catch (e) {
+            console.error("Error calculating age:", e);
+            return null;
+        }
     }
 
     // Check Vote Eligibility
     function isEligibleForVote(profile) {
-        if (profile.status === "deceased") return false;
-        const age = calculateAge(profile.dob);
-        return age !== null && age >= 18;
+        try {
+            if (profile.status === "deceased") return false;
+            const age = calculateAge(profile.dob);
+            return age !== null && age >= 18;
+        } catch (e) {
+            console.error("Error checking vote eligibility:", e);
+            return false;
+        }
     }
 
     // Update Vote Summary
     function updateVoteSummary() {
-        const totalProfiles = profiles.length;
-        const aliveProfiles = profiles.filter(p => p.status === "alive");
-        const voteEligible = aliveProfiles.filter(p => isEligibleForVote(p));
+        try {
+            const totalProfiles = profiles.length;
+            const aliveProfiles = profiles.filter(p => p.status === "alive");
+            const voteEligible = aliveProfiles.filter(p => isEligibleForVote(p));
 
-        const voteSummary = document.getElementById("voteSummary");
-        if (voteSummary) {
-            voteSummary.innerHTML = `
-                <b>Total:</b> ${totalProfiles} | 
-                <b>Alive:</b> ${aliveProfiles.length} | 
-                <b>Eligible Votes:</b> ${voteEligible.length}
-            `;
+            const voteSummary = document.getElementById("voteSummary");
+            if (voteSummary) {
+                voteSummary.innerHTML = `
+                    <b>Total:</b> ${totalProfiles} | 
+                    <b>Alive:</b> ${aliveProfiles.length} | 
+                    <b>Eligible Votes:</b> ${voteEligible.length}
+                `;
+            } else {
+                console.error("Vote summary element not found");
+            }
+        } catch (e) {
+            console.error("Error updating vote summary:", e);
         }
     }
 
     // SAVE PROFILE
     function getBase64(file, callback) {
-        const reader = new FileReader();
-        reader.onload = e => callback(e.target.result);
-        reader.readAsDataURL(file);
+        try {
+            const reader = new FileReader();
+            reader.onload = e => callback(e.target.result);
+            reader.readAsDataURL(file);
+        } catch (e) {
+            console.error("Error reading file:", e);
+        }
     }
 
-    document.getElementById("profileForm")?.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        const photoFile = document.getElementById("profilePhoto")?.files[0];
-        if (photoFile) {
-            getBase64(photoFile, async base64Image => await saveProfile(base64Image));
-        } else {
-            await saveProfile("");
+    document.getElementById("profileForm")?.addEventListener("submit", function (e) {
+        try {
+            e.preventDefault();
+            const photoFile = document.getElementById("profilePhoto")?.files[0];
+            if (photoFile) {
+                getBase64(photoFile, base64Image => saveProfile(base64Image));
+            } else {
+                saveProfile("");
+            }
+        } catch (e) {
+            console.error("Error submitting profile form:", e);
+            alert("Error saving profile: " + e.message);
         }
     });
 
-    async function saveProfile(photoData) {
+    function saveProfile(photoData) {
         try {
             const editCnic = document.getElementById("editCnic")?.value.trim();
             const name = document.getElementById("name")?.value.trim();
@@ -324,14 +313,26 @@ try {
             const deathDate = document.getElementById("deathDate")?.value;
 
             if (!name || !cnic || !status) {
+                console.error("Required form fields missing");
                 alert("Please fill all required fields!");
                 return;
             }
 
-            const profileData = { name, fatherName, cnic, fatherCNIC: fatherCnic, bloodGroup, phone, address, dob, gender, married, spouseCnic, spouseName, status, deathDate, photo: photoData, editCnic };
+            if (!editCnic && profiles.some(p => p.cnic === cnic)) {
+                showDuplicateAlert("This CNIC already exists!");
+                return;
+            }
 
-            await saveProfileToBackend(profileData);
-            await fetchProfiles();
+            const profileData = { name, fatherName, cnic, fatherCNIC: fatherCnic, bloodGroup, phone, address, dob, gender, married, spouseCnic, spouseName, status, deathDate, photo: photoData };
+
+            if (!editCnic) {
+                profiles.push(profileData);
+            } else {
+                const index = profiles.findIndex(p => p.cnic === editCnic);
+                if (index !== -1) profiles[index] = profileData;
+            }
+
+            saveProfiles();
             closeForm();
             renderTree();
         } catch (e) {
@@ -342,78 +343,132 @@ try {
 
     // Married Section logic
     document.getElementById("gender")?.addEventListener("change", function () {
-        document.getElementById("marriedSection").style.display = this.value === "female" ? "block" : "none";
+        try {
+            document.getElementById("marriedSection").style.display = this.value === "female" ? "block" : "none";
+        } catch (e) {
+            console.error("Error in gender change handler:", e);
+        }
     });
 
     document.addEventListener("change", function (e) {
-        if (e.target.name === "married") {
-            document.getElementById("spouseCnic").style.display = e.target.value === "married" ? "block" : "none";
-            document.getElementById("spouseName").style.display = e.target.value === "married" ? "block" : "none";
+        try {
+            if (e.target.name === "married") {
+                document.getElementById("spouseCnic").style.display = e.target.value === "married" ? "block" : "none";
+                document.getElementById("spouseName").style.display = e.target.value === "married" ? "block" : "none";
+            }
+        } catch (e) {
+            console.error("Error in married status change handler:", e);
         }
     });
 
     // Auto-fill Spouse Name
     document.getElementById("spouseCnic")?.addEventListener("input", function () {
-        const sCnic = this.value.trim();
-        const spouse = profiles.find(p => p.cnic === sCnic);
-        document.getElementById("spouseName").value = spouse ? spouse.name : "";
+        try {
+            const sCnic = this.value.trim();
+            const spouse = profiles.find(p => p.cnic === sCnic);
+            document.getElementById("spouseName").value = spouse ? spouse.name : "";
+        } catch (e) {
+            console.error("Error in spouse CNIC input handler:", e);
+        }
     });
 
     // Auto-fill Father Name
     document.getElementById("fatherCnic")?.addEventListener("input", function () {
-        const fCnic = this.value.trim();
-        const father = profiles.find(p => p.cnic === fCnic);
-        document.getElementById("fatherName").value = father ? father.name : "";
+        try {
+            const fCnic = this.value.trim();
+            const father = profiles.find(p => p.cnic === fCnic);
+            document.getElementById("fatherName").value = father ? father.name : "";
+        } catch (e) {
+            console.error("Error in father CNIC input handler:", e);
+        }
     });
 
     // Show/Hide Death Date
     document.querySelectorAll('input[name="status"]').forEach(radio => {
         radio.addEventListener("change", function () {
-            const deathDateInput = document.getElementById("deathDate");
-            deathDateInput.style.display = this.value === "deceased" ? "block" : "none";
-            if (this.value === "alive") deathDateInput.value = "";
+            try {
+                const deathDateInput = document.getElementById("deathDate");
+                deathDateInput.style.display = this.value === "deceased" ? "block" : "none";
+                if (this.value === "alive") deathDateInput.value = "";
+            } catch (e) {
+                console.error("Error in status change handler:", e);
+            }
         });
     });
 
     // Search with Blood Group filter
-    document.getElementById("searchBox")?.addEventListener("input", debounce(async function () {
-        const q = this.value.toLowerCase().trim();
-        const resultsBox = document.getElementById("searchResults");
-        if (!q) {
-            resultsBox.style.display = "none";
-            resultsBox.innerHTML = "";
-            return;
+    document.getElementById("searchBox")?.addEventListener("input", debounce(function () {
+        try {
+            const q = this.value.toLowerCase().trim();
+            const resultsBox = document.getElementById("searchResults");
+            if (!q) {
+                resultsBox.style.display = "none";
+                resultsBox.innerHTML = "";
+                return;
+            }
+
+            const bloodGroups = ["o+", "o-", "a+", "a-", "b+", "b-", "ab+", "ab-"];
+            const maxResults = 50;
+            let results;
+
+            if (bloodGroups.includes(q)) {
+                results = profiles.filter(p => p.status === "alive" && p.bloodGroup.toLowerCase() === q);
+            } else {
+                results = profiles.filter(p =>
+                    (p.name && p.name.toLowerCase().includes(q)) ||
+                    (p.cnic && p.cnic.toLowerCase().includes(q)) ||
+                    (p.fatherName && p.fatherName.toLowerCase().includes(q))
+                );
+            }
+
+            let html = results.slice(0, maxResults).map(r => `
+                <p onclick="showProfile('${r.cnic}');document.getElementById('searchBox').value='';document.getElementById('searchResults').style.display='none';">
+                    ${r.name} - ${r.cnic} (${r.bloodGroup})
+                </p>
+            `).join("");
+
+            resultsBox.innerHTML = html || "<p style='padding:8px;'>کوئی نتیجہ نہیں ملا</p>";
+            resultsBox.style.display = "block";
+        } catch (e) {
+            console.error("Error in search handler:", e);
+            alert("Error in search: " + e.message);
         }
-
-        const bloodGroups = ["o+", "o-", "a+", "a-", "b+", "b-", "ab+", "ab-"];
-        const maxResults = 50;
-        let results;
-
-        if (bloodGroups.includes(q)) {
-            results = profiles.filter(p => p.status === "alive" && p.bloodGroup.toLowerCase() === q);
-        } else {
-            results = profiles.filter(p =>
-                (p.name && p.name.toLowerCase().includes(q)) ||
-                (p.cnic && p.cnic.toLowerCase().includes(q)) ||
-                (p.fatherName && p.fatherName.toLowerCase().includes(q))
-            );
-        }
-
-        let html = results.slice(0, maxResults).map(r => `
-            <p onclick="showProfile('${r.cnic}');document.getElementById('searchBox').value='';document.getElementById('searchResults').style.display='none';">
-                ${r.name} - ${r.cnic} (${r.bloodGroup})
-            </p>
-        `).join("");
-
-        resultsBox.innerHTML = html || "<p style='padding:8px;'>کوئی نتیجہ نہیں ملا</p>";
-        resultsBox.style.display = "block";
     }, 300));
 
+    // Root Profile update
+    try {
+        const rootProfile = profiles.find(p => p.cnic === "ROOT001");
+        if (rootProfile) {
+            rootProfile.note = "یہ حضرت علیؓ کے بیٹے حضرت عباسؓ کے شجرہ سے ہیں";
+            rootProfile.status = "deceased";
+            rootProfile.deathDate = "1950-01-01";
+            saveProfiles();
+        } else {
+            console.warn("Root profile not found, adding default root");
+            profiles.unshift({
+                name: "Hazrat Sultan Abulkhair Shah",
+                fatherName: "",
+                cnic: "ROOT001",
+                fatherCNIC: "",
+                bloodGroup: "O+",
+                phone: "",
+                address: "",
+                dob: "",
+                gender: "male",
+                status: "deceased",
+                deathDate: "1950-01-01",
+                note: "یہ حضرت علیؓ کے بیٹے حضرت عباسؓ کے شجرہ سے ہیں",
+                photo: ""
+            });
+            saveProfiles();
+        }
+    } catch (e) {
+        console.error("Error updating root profile:", e);
+    }
+
     // Tree Rendering with Photo
-    async function renderTree() {
+    function renderTree() {
         try {
-            console.log("Fetching profiles for tree rendering...");
-            await fetchProfiles();
             console.log(`Rendering tree with ${profiles.length} profiles`);
             const container = document.getElementById("treeContainer");
             if (!container) {
@@ -454,150 +509,217 @@ try {
     }
 
     function buildTree(parentCnic, page = 1, pageSize = 10) {
-        const children = profiles.filter(p => p.fatherCNIC === parentCnic);
-        const start = (page - 1) * pageSize;
-        const paginatedChildren = children.slice(start, start + pageSize);
-        let html = `<ul>`;
-        paginatedChildren.forEach(child => {
-            const photoHTML = child.photo ? `<img src="${child.photo}" class="profile-photo">` : "";
-            html += `
-            <li>
-                <div class="node" data-cnic="${child.cnic}">
-                    ${photoHTML}
-                    ${child.name}
-                    <div class="node-actions">
-                        <button class="add-btn" onclick="openForm('${child.cnic}')">+</button>
-                        <button class="edit-btn" data-action="view" data-cnic="${child.cnic}">View</button>
-                        ${currentUser === "cpabk" ? `
-                            <button class="edit-btn" data-action="edit" data-cnic="${child.cnic}">Edit</button>
-                            <button class="delete-btn" data-action="delete" data-cnic="${child.cnic}">Delete</button>
-                        ` : ""}
-                        <button class="delete-btn" data-action="subtree" data-cnic="${child.cnic}">Tree</button>
+        try {
+            console.log("Building tree for parent CNIC:", parentCnic);
+            const children = profiles.filter(p => p.fatherCNIC === parentCnic);
+            const start = (page - 1) * pageSize;
+            const paginatedChildren = children.slice(start, start + pageSize);
+            let html = `<ul>`;
+            paginatedChildren.forEach(child => {
+                const photoHTML = child.photo ? `<img src="${child.photo}" class="profile-photo">` : "";
+                html += `
+                <li>
+                    <div class="node" data-cnic="${child.cnic}">
+                        ${photoHTML}
+                        ${child.name}
+                        <div class="node-actions">
+                            <button class="add-btn" onclick="openForm('${child.cnic}')">+</button>
+                            <button class="edit-btn" data-action="view" data-cnic="${child.cnic}">View</button>
+                            ${currentUser === "cpabk" ? `
+                                <button class="edit-btn" data-action="edit" data-cnic="${child.cnic}">Edit</button>
+                                <button class="delete-btn" data-action="delete" data-cnic="${child.cnic}">Delete</button>
+                            ` : ""}
+                            <button class="delete-btn" data-action="subtree" data-cnic="${child.cnic}">Tree</button>
+                        </div>
                     </div>
-                </div>
-                <ul id="children-${child.cnic}">${buildTree(child.cnic)}</ul>
-            </li>`;
-        });
-        if (children.length > start + pageSize) {
-            html += `<li><button class="load-more-btn" onclick="loadMoreChildren('${parentCnic}', ${page + 1}, ${pageSize})">مزید لوڈ کریں</button></li>`;
+                    <ul id="children-${child.cnic}">${buildTree(child.cnic)}</ul>
+                </li>`;
+            });
+            if (children.length > start + pageSize) {
+                html += `<li><button class="load-more-btn" onclick="loadMoreChildren('${parentCnic}', ${page + 1}, ${pageSize})">مزید لوڈ کریں</button></li>`;
+            }
+            html += `</ul>`;
+            console.log("Tree built for CNIC:", parentCnic);
+            return html;
+        } catch (e) {
+            console.error("Error building tree:", e);
+            return "";
         }
-        html += `</ul>`;
-        return html;
     }
 
     function loadMoreChildren(parentCnic, page, pageSize) {
-        const container = document.getElementById(`children-${parentCnic}`);
-        if (container) {
-            container.innerHTML = buildTree(parentCnic, page, pageSize);
+        try {
+            const container = document.getElementById(`children-${parentCnic}`);
+            if (container) {
+                container.innerHTML = buildTree(parentCnic, page, pageSize);
+            }
+        } catch (e) {
+            console.error("Error loading more children:", e);
         }
     }
 
     // Event Delegation for Node Actions
-    document.addEventListener("click", async function (e) {
-        const action = e.target.dataset.action;
-        const cnic = e.target.dataset.cnic;
-        if (!action || !cnic) return;
+    document.addEventListener("click", function (e) {
+        try {
+            const action = e.target.dataset.action;
+            const cnic = e.target.dataset.cnic;
+            if (!action || !cnic) return;
 
-        if (action === "view") showProfile(cnic);
-        if (action === "edit" && currentUser === "cpabk") editProfile(cnic);
-        if (action === "delete" && currentUser === "cpabk") {
-            if (confirm("Are you sure you want to delete this profile and all its children?")) {
-                await deleteProfileFromBackend(cnic);
-                await fetchProfiles();
-                renderTree();
-            }
+            if (action === "view") showProfile(cnic);
+            if (action === "edit" && currentUser === "cpabk") editProfile(cnic);
+            if (action === "delete" && currentUser === "cpabk") deleteProfile(cnic);
+            if (action === "subtree") showSubTree(cnic);
+        } catch (e) {
+            console.error("Error in node action handler:", e);
+            alert("Error handling action: " + e.message);
         }
-        if (action === "subtree") showSubTree(cnic);
     });
 
     // SubTree Modal
     function showSubTree(cnic) {
-        const person = profiles.find(p => p.cnic === cnic);
-        if (!person) {
-            console.error("Profile not found for subtree:", cnic);
-            alert("Profile not found for subtree!");
-            return;
-        }
-        const subtreeHTML = `
-            <div class="tree">
-                <ul>
-                    <li>
-                        <div class="node root-node" data-cnic="${person.cnic}">
-                            ${person.photo ? `<img src="${person.photo}" style="width:40px;height:40px;border-radius:50%;"><br>` : ""}
-                            ${person.name}
-                        </div>
-                        <ul id="children-${person.cnic}">${buildTree(person.cnic)}</ul>
-                    </li>
-                </ul>
-            </div>
-        `;
-        const subTreeContent = document.getElementById("subTreeContent");
-        if (subTreeContent) {
-            subTreeContent.innerHTML = `
-                <button class="close-btn" onclick="closeSubTreeModal()">×</button>
-                ${subtreeHTML}
+        try {
+            const person = profiles.find(p => p.cnic === cnic);
+            if (!person) {
+                console.error("Profile not found for subtree:", cnic);
+                alert("Profile not found for subtree!");
+                return;
+            }
+            const subtreeHTML = `
+                <div class="tree">
+                    <ul>
+                        <li>
+                            <div class="node root-node" data-cnic="${person.cnic}">
+                                ${person.photo ? `<img src="${person.photo}" style="width:40px;height:40px;border-radius:50%;"><br>` : ""}
+                                ${person.name}
+                            </div>
+                            <ul id="children-${person.cnic}">${buildTree(person.cnic)}</ul>
+                        </li>
+                    </ul>
+                </div>
             `;
-            document.getElementById("subTreeModal").style.display = "flex";
-        } else {
-            console.error("Subtree modal content element not found");
-            alert("Subtree modal content not found!");
+            const subTreeContent = document.getElementById("subTreeContent");
+            if (subTreeContent) {
+                subTreeContent.innerHTML = `
+                    <button class="close-btn" onclick="closeSubTreeModal()">×</button>
+                    ${subtreeHTML}
+                `;
+                document.getElementById("subTreeModal").style.display = "flex";
+            } else {
+                console.error("Subtree modal content element not found");
+                alert("Subtree modal content not found!");
+            }
+        } catch (e) {
+            console.error("Error showing subtree:", e);
+            alert("Error showing subtree: " + e.message);
         }
     }
 
     function closeSubTreeModal() {
-        const modal = document.getElementById("subTreeModal");
-        if (modal) modal.style.display = "none";
+        try {
+            const modal = document.getElementById("subTreeModal");
+            if (modal) modal.style.display = "none";
+        } catch (e) {
+            console.error("Error closing subtree modal:", e);
+        }
     }
 
     // Edit Profile
     function editProfile(cnic) {
-        const person = profiles.find(p => p.cnic === cnic);
-        if (!person) {
-            alert("Profile not found!");
-            return;
-        }
+        try {
+            const person = profiles.find(p => p.cnic === cnic);
+            if (!person) {
+                alert("Profile not found!");
+                return;
+            }
 
-        openForm();
-        document.getElementById("formTitle").innerText = "Edit Profile";
-        document.getElementById("editCnic").value = person.cnic;
-        document.getElementById("name").value = person.name;
-        document.getElementById("fatherName").value = person.fatherName;
-        document.getElementById("cnic").value = person.cnic;
-        document.getElementById("fatherCnic").value = person.fatherCNIC;
-        document.getElementById("bloodGroup").value = person.bloodGroup;
-        document.getElementById("phone").value = person.phone;
-        document.getElementById("address").value = person.address;
-        document.getElementById("dob").value = person.dob;
-        document.getElementById("gender").value = person.gender;
+            openForm();
+            document.getElementById("formTitle").innerText = "Edit Profile";
+            document.getElementById("editCnic").value = person.cnic;
+            document.getElementById("name").value = person.name;
+            document.getElementById("fatherName").value = person.fatherName;
+            document.getElementById("cnic").value = person.cnic;
+            document.getElementById("fatherCnic").value = person.fatherCNIC;
+            document.getElementById("bloodGroup").value = person.bloodGroup;
+            document.getElementById("phone").value = person.phone;
+            document.getElementById("address").value = person.address;
+            document.getElementById("dob").value = person.dob;
+            document.getElementById("gender").value = person.gender;
 
-        if (person.gender === "female") document.getElementById("marriedSection").style.display = "block";
-        if (person.married === "married") {
-            document.querySelector('input[name="married"][value="married"]').checked = true;
-            document.getElementById("spouseCnic").style.display = "block";
-            document.getElementById("spouseName").style.display = "block";
-        } else {
-            document.querySelector('input[name="married"][value="unmarried"]').checked = true;
+            if (person.gender === "female") document.getElementById("marriedSection").style.display = "block";
+            if (person.married === "married") {
+                document.querySelector('input[name="married"][value="married"]').checked = true;
+                document.getElementById("spouseCnic").style.display = "block";
+                document.getElementById("spouseName").style.display = "block";
+            } else {
+                document.querySelector('input[name="married"][value="unmarried"]').checked = true;
+            }
+            document.getElementById("spouseCnic").value = person.spouseCnic || "";
+            document.getElementById("spouseName").value = person.spouseName || "";
+            document.querySelector(`input[name="status"][value="${person.status}"]`).checked = true;
+            document.getElementById("deathDate").style.display = person.status === "deceased" ? "block" : "none";
+            document.getElementById("deathDate").value = person.deathDate;
+        } catch (e) {
+            console.error("Error editing profile:", e);
+            alert("Error editing profile: " + e.message);
         }
-        document.getElementById("spouseCnic").value = person.spouseCnic || "";
-        document.getElementById("spouseName").value = person.spouseName || "";
-        document.querySelector(`input[name="status"][value="${person.status}"]`).checked = true;
-        document.getElementById("deathDate").style.display = person.status === "deceased" ? "block" : "none";
-        document.getElementById("deathDate").value = person.deathDate;
+    }
+
+    // Delete Profile
+    function deleteProfile(cnic) {
+        try {
+            if (!confirm("Are you sure you want to delete this profile and all its children?")) return;
+            function removeBranch(cnic) {
+                const children = profiles.filter(p => p.fatherCNIC === cnic);
+                children.forEach(child => removeBranch(child.cnic));
+                profiles = profiles.filter(p => p.cnic !== cnic);
+            }
+            removeBranch(cnic);
+            saveProfiles();
+            renderTree();
+        } catch (e) {
+            console.error("Error deleting profile:", e);
+            alert("Error deleting profile: " + e.message);
+        }
+    }
+
+    // Generate and Store Random Code
+    function getStoredRandomCode() {
+        try {
+            let randomCode = localStorage.getItem("randomCode");
+            if (!randomCode) {
+                randomCode = Math.floor(100000 + Math.random() * 900000);
+                localStorage.setItem("randomCode", randomCode);
+            }
+            return parseInt(randomCode);
+        } catch (e) {
+            console.error("Error generating random code:", e);
+            return 0;
+        }
     }
 
     // Parse d/m/y Date to JavaScript Date
     function parseDMYDate(dateStr) {
-        if (!dateStr || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return null;
-        const [day, month, year] = dateStr.split("/").map(Number);
-        return new Date(year, month - 1, day);
+        try {
+            if (!dateStr || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) return null;
+            const [day, month, year] = dateStr.split("/").map(Number);
+            return new Date(year, month - 1, day);
+        } catch (e) {
+            console.error("Error parsing date:", e);
+            return null;
+        }
     }
 
     // Format Date as d/m/y with Full Year
     function formatDMYDate(date) {
-        const day = date.getDate();
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
+        try {
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        } catch (e) {
+            console.error("Error formatting date:", e);
+            return "";
+        }
     }
 
     // Get Month Range
@@ -613,37 +735,141 @@ try {
     }
 
     // Populate Month Selector
-    async function populateMonthSelector() {
-        const selector = document.getElementById("monthSelector");
-        if (!selector) return;
+    function populateMonthSelector() {
+        try {
+            const selector = document.getElementById("monthSelector");
+            if (!selector) return;
 
-        const months = [];
-        const today = new Date();
-        const earliestYear = 2025;
-        for (let year = earliestYear; year <= today.getFullYear(); year++) {
-            for (let month = 0; month < 12; month++) {
-                const response = await fetch(`${API_URL}/funds/${year}/${month + 1}`);
-                const data = await response.json();
-                if (data.fundsReceived.length > 0 || data.fundsUsed.length > 0) {
-                    months.push({ year, month });
+            const months = [];
+            const today = new Date();
+            const earliestYear = 2025;
+            for (let year = earliestYear; year <= today.getFullYear(); year++) {
+                for (let month = 0; month < 12; month++) {
+                    const key = getFundsKey("fundsReceived", new Date(year, month, 1));
+                    if (localStorage.getItem(key)) {
+                        months.push({ year, month });
+                    }
                 }
             }
+            const currentKey = getFundsKey("fundsReceived", today);
+            if (!months.some(m => getFundsKey("fundsReceived", new Date(m.year, m.month, 1)) === currentKey)) {
+                months.push({ year: today.getFullYear(), month: today.getMonth() });
+            }
+
+            months.sort((a, b) => new Date(b.year, b.month) - new Date(a.year, a.month));
+
+            selector.innerHTML = months.map(m => {
+                const date = new Date(m.year, m.month, 1);
+                const monthName = date.toLocaleString('default', { month: 'long' });
+                return `<option value="${m.year}-${m.month}">${monthName} ${m.year}</option>`;
+            }).join("");
+        } catch (e) {
+            console.error("Error populating month selector:", e);
         }
-        months.push({ year: today.getFullYear(), month: today.getMonth() });
+    }
 
-        months.sort((a, b) => new Date(b.year, b.month) - new Date(a.year, a.month));
+    // Check Plan Status
+    function checkPlanStatus() {
+        try {
+            const forceLockForTesting = false;
+            if (forceLockForTesting) {
+                showLockModal();
+                return;
+            }
 
-        selector.innerHTML = months.map(m => {
-            const date = new Date(m.year, m.month, 1);
-            const monthName = date.toLocaleString('default', { month: 'long' });
-            return `<option value="${m.year}-${m.month}">${monthName} ${m.year}</option>`;
-        }).join("");
+            const lastUnlockDate = localStorage.getItem("lastUnlockDate");
+            const today = new Date();
+
+            if (!lastUnlockDate) {
+                localStorage.setItem("lastUnlockDate", formatDMYDate(today));
+                localStorage.setItem("randomCode", Math.floor(100000 + Math.random() * 900000));
+                return;
+            }
+
+            const lastDate = parseDMYDate(lastUnlockDate);
+            if (!lastDate) {
+                localStorage.setItem("lastUnlockDate", formatDMYDate(today));
+                localStorage.setItem("randomCode", Math.floor(100000 + Math.random() * 900000));
+                return;
+            }
+
+            const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+
+            if (diffDays >= 30) {
+                showLockModal();
+            }
+        } catch (e) {
+            console.error("Error checking plan status:", e);
+            alert("Error checking plan status: " + e.message);
+        }
+    }
+
+    // Show Lock Modal
+    function showLockModal() {
+        try {
+            const randomCode = getStoredRandomCode();
+            const correctCode = randomCode * 2 + 985973;
+
+            const lockModal = document.createElement("div");
+            lockModal.id = "lockModal";
+            lockModal.style.cssText = `
+                position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);
+                display:flex;justify-content:center;align-items:center;z-index:9999;font-family:Arial;
+            `;
+
+            lockModal.innerHTML = `
+                <div style="background:#fff;padding:20px;border-radius:10px;width:90%;max-width:360px;text-align:center;">
+                    <h3 style="color:#d62828;margin-bottom:10px;">⚠ پلان ختم ہوگیا</h3>
+                    <p style="color:#333;">ان لاک کرنے کے لیے دیے گئے وٹس آیپ پہ رابطہ کریں۔ To unlock, contact the given WhatsApp number. Send the provided code to the number mentioned below.:</p>
+                    <p style="font-size:22px;font-weight:bold;color:#0a9396;margin:15px 0;">${randomCode}</p>
+                    <p style="margin-bottom:10px;color:#d62828;">Correct Code: ${correctCode}</p>
+                    <input type="text" id="unlockInput" placeholder="Enter Unlock Code" 
+                        style="width:100%;padding:10px;margin-top:10px;border:1px solid #ccc;border-radius:6px;font-size:16px;">
+                    <button id="unlockBtn" 
+                        style="margin-top:15px;padding:10px 18px;background:#0a9396;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:16px;">
+                        Unlock
+                    </button>
+                    <p style="margin-top:12px;font-size:14px;">Contact for Unlock: 
+                        <a href="https://wa.me/923117323373" target="_blank" style="color:#d62828;text-decoration:none;font-weight:bold;">
+                            WhatsApp 03117323373
+                        </a>
+                    </p>
+                </div>
+            `;
+
+            document.body.appendChild(lockModal);
+
+            document.getElementById("unlockBtn").addEventListener("click", function () {
+                try {
+                    const userCode = document.getElementById("unlockInput").value.trim();
+
+                    if (parseInt(userCode) === correctCode || currentUser === "cpabk") {
+                        localStorage.setItem("lastUnlockDate", formatDMYDate(new Date()));
+                        localStorage.removeItem("randomCode");
+                        document.body.removeChild(lockModal);
+                        alert("✅ App Unlocked Successfully!");
+                        location.reload();
+                    } else {
+                        alert("❌ غلط Code! دوبارہ کوشش کریں۔");
+                    }
+                } catch (e) {
+                    console.error("Error in unlock button handler:", e);
+                    alert("Error unlocking app: " + e.message);
+                }
+            });
+        } catch (e) {
+            console.error("Error showing lock modal:", e);
+            alert("Error showing lock modal: " + e.message);
+        }
     }
 
     // Funds Rendering
-    async function renderFunds() {
+    function renderFunds() {
         try {
             const today = new Date();
+            const lastUpdate = localStorage.getItem("lastFundUpdate");
+
+            // Update currentMonth based on selector
             const selector = document.getElementById("monthSelector");
             if (selector && selector.value) {
                 const [year, month] = selector.value.split("-").map(Number);
@@ -652,14 +878,36 @@ try {
                 currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             }
 
-            await fetchFunds(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+            // Load funds and balance for the selected month
+            fundsReceived = JSON.parse(localStorage.getItem(getFundsKey("fundsReceived", currentMonth))) || [];
+            fundsUsed = JSON.parse(localStorage.getItem(getFundsKey("fundsUsed", currentMonth))) || [];
+            currentBalance = parseFloat(localStorage.getItem(getBalanceKey(currentMonth))) || 0;
 
+            // Check if we need to transfer balance from previous month
+            if (lastUpdate && currentMonth.getTime() === new Date(today.getFullYear(), today.getMonth(), 1).getTime()) {
+                const lastDate = new Date(lastUpdate);
+                if (today.getMonth() !== lastDate.getMonth() || today.getFullYear() !== lastDate.getFullYear()) {
+                    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const prevBalance = parseFloat(localStorage.getItem(getBalanceKey(prevMonth))) || 0;
+                    const prevFundsReceived = JSON.parse(localStorage.getItem(getFundsKey("fundsReceived", prevMonth))) || [];
+                    const prevFundsUsed = JSON.parse(localStorage.getItem(getFundsKey("fundsUsed", prevMonth))) || [];
+                    const lastMonthBalance = prevBalance + calculateCurrentBalance(prevFundsReceived, prevFundsUsed);
+                    currentBalance = lastMonthBalance > 0 ? lastMonthBalance : 0;
+                    fundsReceived = [];
+                    fundsUsed = [];
+                    saveFunds();
+                }
+            }
+            localStorage.setItem("lastFundUpdate", today.toISOString());
+
+            // Update date range header
             const dateRangeHeader = document.getElementById("dateRangeHeader");
             if (dateRangeHeader) {
                 const range = getMonthRange(currentMonth);
                 dateRangeHeader.textContent = `Report Period: ${range.start} to ${range.end}`;
             }
 
+            // Render funds received table
             const receiveBody = document.getElementById("fundReceiveBody");
             if (receiveBody) {
                 receiveBody.innerHTML = "";
@@ -671,12 +919,13 @@ try {
                         <td style="padding: 8px; border: 1px solid #ccc;">${fund.amount}</td>
                         <td style="padding: 8px; border: 1px solid #ccc;">${fund.accountNumber || '-'}</td>
                         <td style="padding: 8px; border: 1px solid #ccc;">${fund.method || '-'}</td>
-                        <td style="padding: 8px; border: 1px solid #ccc;">${formatDMYDate(new Date(fund.date))}</td>
+                        <td style="padding: 8px; border: 1px solid #ccc;">${fund.date}</td>
                     `;
                     receiveBody.appendChild(row);
                 });
             }
 
+            // Render funds used table
             const useBody = document.getElementById("fundUseBody");
             if (useBody) {
                 useBody.innerHTML = "";
@@ -686,14 +935,14 @@ try {
                     row.innerHTML = `
                         <td style="padding: 8px; border: 1px solid #ccc;">${fund.purpose}</td>
                         <td style="padding: 8px; border: 1px solid #ccc;">${fund.amount}</td>
-                        <td style="padding: 8px; border: 1px solid #ccc;">${formatDMYDate(new Date(fund.date))}</td>
+                        <td style="padding: 8px; border: 1px solid #ccc;">${fund.date}</td>
                     `;
                     useBody.appendChild(row);
                 });
             }
 
             updateFundTotals();
-            await populateMonthSelector();
+            populateMonthSelector();
         } catch (e) {
             console.error("Error rendering funds:", e);
             alert("Error rendering funds: " + e.message);
@@ -702,308 +951,361 @@ try {
 
     // Update Fund Totals
     function updateFundTotals() {
-        const totalReceived = fundsReceived.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
-        const totalUsed = fundsUsed.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+        try {
+            const totalReceived = fundsReceived.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+            const totalUsed = fundsUsed.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
 
-        document.getElementById("totalReceived").textContent = totalReceived.toFixed(2);
-        document.getElementById("totalUsed").textContent = totalUsed.toFixed(2);
-        document.getElementById("currentBalance").textContent = (totalReceived - totalUsed).toFixed(2);
+            document.getElementById("totalReceived").textContent = totalReceived.toFixed(2);
+            document.getElementById("totalUsed").textContent = totalUsed.toFixed(2);
+            document.getElementById("currentBalance").textContent = (currentBalance + totalReceived - totalUsed).toFixed(2);
+        } catch (e) {
+            console.error("Error updating fund totals:", e);
+        }
     }
 
-    // Calculate Current Balance
-    function calculateCurrentBalance() {
-        const totalReceived = fundsReceived.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
-        const totalUsed = fundsUsed.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
-        return totalReceived - totalUsed;
+    // Calculate Current Balance for a specific month
+    function calculateCurrentBalance(received = fundsReceived, used = fundsUsed) {
+        try {
+            const totalReceived = received.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+            const totalUsed = used.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+            return totalReceived - totalUsed;
+        } catch (e) {
+            console.error("Error calculating current balance:", e);
+            return 0;
+        }
     }
 
     // Handle Fund Receive Form
-    document.getElementById("fundReceiveForm")?.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        const name = document.getElementById("fundName").value.trim();
-        const amount = parseFloat(document.getElementById("fundAmount").value);
-        const accountNumber = document.getElementById("accountNumber").value.trim();
-        const method = document.getElementById("paymentMethod").value;
-        const date = new Date();
+    document.getElementById("fundReceiveForm")?.addEventListener("submit", function (e) {
+        try {
+            e.preventDefault();
+            const name = document.getElementById("fundName").value.trim();
+            const amount = parseFloat(document.getElementById("fundAmount").value);
+            const accountNumber = document.getElementById("accountNumber").value.trim();
+            const method = document.getElementById("paymentMethod").value;
+            const date = formatDMYDate(new Date());
 
-        if (!name || !amount || !accountNumber || !method) {
-            alert("Please fill all required fields!");
-            return;
+            if (!name || !amount || !accountNumber || !method) {
+                alert("Please fill all required fields!");
+                return;
+            }
+
+            fundsReceived.push({ name, amount, accountNumber, method, date });
+            saveFunds();
+            renderFunds();
+            this.reset();
+        } catch (e) {
+            console.error("Error submitting fund receive form:", e);
+            alert("Error saving fund: " + e.message);
         }
-
-        await saveFundReceived({ name, amount, accountNumber, method, date });
-        await renderFunds();
-        this.reset();
     });
 
     // Handle Fund Use Form
-    document.getElementById("fundUseForm")?.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        const purpose = document.getElementById("fundPurpose").value.trim();
-        const amount = parseFloat(document.getElementById("fundUsed").value);
-        const date = new Date();
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth() + 1;
+    document.getElementById("fundUseForm")?.addEventListener("submit", function (e) {
+        try {
+            e.preventDefault();
+            const purpose = document.getElementById("fundPurpose").value.trim();
+            const amount = parseFloat(document.getElementById("fundUsed").value);
+            const date = formatDMYDate(new Date());
 
-        if (!purpose || !amount) {
-            alert("Please fill all required fields!");
-            return;
+            if (!purpose || !amount) {
+                alert("Please fill all required fields!");
+                return;
+            }
+
+            const availableBalance = currentBalance + calculateCurrentBalance();
+            if (amount > availableBalance) {
+                alert("Insufficient funds!");
+                return;
+            }
+
+            fundsUsed.push({ purpose, amount, date });
+            saveFunds();
+            renderFunds();
+            this.reset();
+        } catch (e) {
+            console.error("Error submitting fund use form:", e);
+            alert("Error using fund: " + e.message);
         }
-
-        await saveFundUsed({ purpose, amount, date, year, month });
-        await renderFunds();
-        this.reset();
     });
 
     // Export Fund Receive Table to PDF
     function exportFundReceivePDF() {
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            alert("jsPDF library not loaded");
-            return;
+        try {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                throw new Error("jsPDF library not loaded");
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFont("helvetica", "normal");
+
+            doc.setFontSize(16);
+            doc.text("Received Funds Report", 14, 20);
+            doc.setFontSize(12);
+            const range = getMonthRange(currentMonth);
+            doc.text(`Period: ${range.start} to ${range.end}`, 14, 30);
+
+            const headers = ["Name", "Fund Amount", "Account Number", "Payment Method", "Date"];
+            const data = fundsReceived.map(fund => [
+                fund.name,
+                fund.amount.toString(),
+                fund.accountNumber || '-',
+                fund.method || '-',
+                fund.date
+            ]);
+
+            if (typeof doc.autoTable === "function") {
+                doc.autoTable({
+                    startY: 40,
+                    head: [headers],
+                    body: data,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 95, 115], textColor: [255, 255, 255] },
+                    styles: { textColor: [51, 51, 51], lineColor: [204, 204, 204], lineWidth: 0.1 },
+                });
+
+                const totalReceived = fundsReceived.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+                doc.text(`Total Received: ${totalReceived.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
+            } else {
+                throw new Error("autoTable plugin not loaded");
+            }
+
+            doc.save(`Fund_Receive_Report_${currentMonth.getFullYear()}-${(currentMonth.getMonth() + 1).toString().padStart(2, '0')}.pdf`);
+        } catch (e) {
+            console.error("Error exporting fund receive PDF:", e);
+            alert("Error exporting PDF: " + e.message);
         }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFont("helvetica", "normal");
-
-        doc.setFontSize(16);
-        doc.text("Received Funds Report", 14, 20);
-        doc.setFontSize(12);
-        const range = getMonthRange(currentMonth);
-        doc.text(`Period: ${range.start} to ${range.end}`, 14, 30);
-
-        const headers = ["Name", "Fund Amount", "Account Number", "Payment Method", "Date"];
-        const data = fundsReceived.map(fund => [
-            fund.name,
-            fund.amount.toString(),
-            fund.accountNumber || '-',
-            fund.method || '-',
-            formatDMYDate(new Date(fund.date))
-        ]);
-
-        if (typeof doc.autoTable === "function") {
-            doc.autoTable({
-                startY: 40,
-                head: [headers],
-                body: data,
-                theme: 'grid',
-                headStyles: { fillColor: [0, 95, 115], textColor: [255, 255, 255] },
-                styles: { textColor: [51, 51, 51], lineColor: [204, 204, 204], lineWidth: 0.1 },
-            });
-
-            const totalReceived = fundsReceived.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
-            doc.text(`Total Received: ${totalReceived.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
-        } else {
-            alert("autoTable plugin not loaded");
-            return;
-        }
-
-        doc.save(`Fund_Receive_Report_${currentMonth.getFullYear()}-${(currentMonth.getMonth() + 1).toString().padStart(2, '0')}.pdf`);
     }
 
     // Export Fund Use Table to PDF
     function exportFundUsePDF() {
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            alert("jsPDF library not loaded");
-            return;
+        try {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                throw new Error("jsPDF library not loaded");
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFont("helvetica", "normal");
+
+            doc.setFontSize(16);
+            doc.text("Used Funds Report", 14, 20);
+            doc.setFontSize(12);
+            const range = getMonthRange(currentMonth);
+            doc.text(`Period: ${range.start} to ${range.end}`, 14, 30);
+
+            const headers = ["Purpose", "Amount", "Date"];
+            const data = fundsUsed.map(fund => [
+                fund.purpose,
+                fund.amount.toString(),
+                fund.date
+            ]);
+
+            if (typeof doc.autoTable === "function") {
+                doc.autoTable({
+                    startY: 40,
+                    head: [headers],
+                    body: data,
+                    theme: 'grid',
+                    headStyles: { fillColor: [255, 140, 102], textColor: [255, 255, 255] },
+                    styles: { textColor: [51, 51, 51], lineColor: [204, 204, 204], lineWidth: 0.1 },
+                });
+
+                const totalUsed = fundsUsed.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+                doc.text(`Total Used: ${totalUsed.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
+                doc.text(`Current Balance: ${(currentBalance + calculateCurrentBalance()).toFixed(2)}`, 14, doc.lastAutoTable.finalY + 20);
+            } else {
+                throw new Error("autoTable plugin not loaded");
+            }
+
+            doc.save(`Fund_Use_Report_${currentMonth.getFullYear()}-${(currentMonth.getMonth() + 1).toString().padStart(2, '0')}.pdf`);
+        } catch (e) {
+            console.error("Error exporting fund use PDF:", e);
+            alert("Error exporting PDF: " + e.message);
         }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFont("helvetica", "normal");
-
-        doc.setFontSize(16);
-        doc.text("Used Funds Report", 14, 20);
-        doc.setFontSize(12);
-        const range = getMonthRange(currentMonth);
-        doc.text(`Period: ${range.start} to ${range.end}`, 14, 30);
-
-        const headers = ["Purpose", "Amount", "Date"];
-        const data = fundsUsed.map(fund => [
-            fund.purpose,
-            fund.amount.toString(),
-            formatDMYDate(new Date(fund.date))
-        ]);
-
-        if (typeof doc.autoTable === "function") {
-            doc.autoTable({
-                startY: 40,
-                head: [headers],
-                body: data,
-                theme: 'grid',
-                headStyles: { fillColor: [255, 140, 102], textColor: [255, 255, 255] },
-                styles: { textColor: [51, 51, 51], lineColor: [204, 204, 204], lineWidth: 0.1 },
-            });
-
-            const totalUsed = fundsUsed.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
-            doc.text(`Total Used: ${totalUsed.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
-            doc.text(`Current Balance: ${calculateCurrentBalance().toFixed(2)}`, 14, doc.lastAutoTable.finalY + 20);
-        } else {
-            alert("autoTable plugin not loaded");
-            return;
-        }
-
-        doc.save(`Fund_Use_Report_${currentMonth.getFullYear()}-${(currentMonth.getMonth() + 1).toString().padStart(2, '0')}.pdf`);
     }
 
     // Export as CSV
-    async function exportBackup() {
-        await fetchProfiles();
-        if (!profiles || profiles.length === 0) {
-            alert("No data to export!");
-            return;
-        }
-
-        const headers = [
-            "name", "fatherName", "cnic", "fatherCNIC", "bloodGroup", "phone",
-            "address", "dob", "gender", "married", "spouseCnic", "spouseName", "status", "deathDate", "photo", "note"
-        ];
-
-        let csv = "\uFEFF" + headers.join(",") + "\n";
-        profiles.forEach(profile => {
-            const row = headers.map(h => {
-                const value = profile[h] || "";
-                return `"${value.replace(/"/g, '""').replace(/\n/g, ' ')}"`;
-            }).join(",");
-            csv += row + "\n";
-        });
-
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", "ABK_Family_Backup.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        alert("Data exported successfully!");
-    }
-
-    // Import from CSV
-    async function importBackup(event) {
-        const fileInput = document.getElementById("importBackup");
-        if (!fileInput) {
-            console.error("Import file input not found in DOM");
-            alert("Import file input not found!");
-            return;
-        }
-
-        const file = event.target.files[0];
-        if (!file) {
-            alert("No file selected!");
-            return;
-        }
-
-        if (!file.name.endsWith(".csv")) {
-            alert("Invalid file type! Please select a CSV file.");
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = async function (e) {
-            const text = e.target.result;
-            const lines = text.split("\n").map(line => line.trim()).filter(line => line);
-            if (lines.length < 1) {
-                alert("CSV file is empty!");
+    function exportBackup() {
+        try {
+            if (!profiles || profiles.length === 0) {
+                alert("No data to export!");
                 return;
             }
 
-            const cleanText = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
-            const cleanLines = cleanText.split("\n").map(line => line.trim()).filter(line => line);
-
-            const headers = cleanLines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.replace(/"/g, "").trim());
-            const expectedHeaders = [
+            const headers = [
                 "name", "fatherName", "cnic", "fatherCNIC", "bloodGroup", "phone",
                 "address", "dob", "gender", "married", "spouseCnic", "spouseName", "status", "deathDate", "photo", "note"
             ];
 
-            if (!headers.every((h, i) => h === expectedHeaders[i])) {
-                alert("Invalid CSV format! Expected headers: " + expectedHeaders.join(", "));
+            // Create CSV with BOM for UTF-8 to support Urdu characters
+            let csv = "\uFEFF" + headers.join(",") + "\n";
+
+            profiles.forEach(profile => {
+                const row = headers.map(h => {
+                    const value = profile[h] || "";
+                    // Properly escape quotes and handle commas in values
+                    return `"${value.replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+                }).join(",");
+                csv += row + "\n";
+            });
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "ABK_Family_Backup.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            alert("Data exported successfully!");
+        } catch (e) {
+            console.error("Error exporting backup:", e);
+            alert("Error exporting backup: " + e.message);
+        }
+    }
+
+    // Import from CSV
+    async function importBackup(event) {
+        try {
+            const fileInput = document.getElementById("importBackup");
+            if (!fileInput) {
+                console.error("Import file input not found in DOM");
+                alert("Import file input not found! Please ensure the input element with id='importBackup' exists.");
                 return;
             }
 
-            const importedProfiles = [];
-            const duplicateProfiles = [];
-            const chunkSize = 100;
+            const file = event.target.files[0];
+            if (!file) {
+                alert("No file selected! Please choose a CSV file.");
+                return;
+            }
 
-            for (let i = 1; i < cleanLines.length; i += chunkSize) {
-                const chunk = cleanLines.slice(i, i + chunkSize);
-                for (const line of chunk) {
-                    const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, "").trim());
-                    if (values.length !== headers.length) {
-                        console.warn("Skipping malformed row:", line);
-                        continue;
+            if (!file.name.endsWith(".csv")) {
+                alert("Invalid file type! Please select a CSV file.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split("\n").map(line => line.trim()).filter(line => line);
+                    if (lines.length < 1) {
+                        alert("CSV file is empty!");
+                        return;
                     }
 
-                    let obj = {};
-                    headers.forEach((header, index) => {
-                        obj[header] = values[index] || "";
-                    });
+                    // Remove BOM if present
+                    const cleanText = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+                    const cleanLines = cleanText.split("\n").map(line => line.trim()).filter(line => line);
 
-                    if (!obj.cnic || !obj.name) {
-                        console.warn("Skipping row with missing CNIC or name:", obj);
-                        continue;
+                    const headers = cleanLines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.replace(/"/g, "").trim());
+                    const expectedHeaders = [
+                        "name", "fatherName", "cnic", "fatherCNIC", "bloodGroup", "phone",
+                        "address", "dob", "gender", "married", "spouseCnic", "spouseName", "status", "deathDate", "photo", "note"
+                    ];
+
+                    // Validate headers
+                    if (!headers.every((h, i) => h === expectedHeaders[i])) {
+                        alert("Invalid CSV format! Expected headers: " + expectedHeaders.join(", "));
+                        return;
                     }
 
-                    const validBloodGroups = ["o+", "o-", "a+", "a-", "b+", "b-", "ab+", "ab-"];
-                    if (obj.bloodGroup && !validBloodGroups.includes(obj.bloodGroup.toLowerCase())) {
-                        obj.bloodGroup = "";
+                    const importedProfiles = [];
+                    const duplicateProfiles = [];
+                    const chunkSize = 100;
+
+                    for (let i = 1; i < cleanLines.length; i += chunkSize) {
+                        const chunk = cleanLines.slice(i, i + chunkSize);
+                        for (const line of chunk) {
+                            const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, "").trim());
+                            if (values.length !== headers.length) {
+                                console.warn("Skipping malformed row:", line);
+                                continue;
+                            }
+
+                            let obj = {};
+                            headers.forEach((header, index) => {
+                                obj[header] = values[index] || "";
+                            });
+
+                            // Validate required fields
+                            if (!obj.cnic || !obj.name) {
+                                console.warn("Skipping row with missing CNIC or name:", obj);
+                                continue;
+                            }
+
+                            // Validate bloodGroup
+                            const validBloodGroups = ["o+", "o-", "a+", "a-", "b+", "b-", "ab+", "ab-"];
+                            if (obj.bloodGroup && !validBloodGroups.includes(obj.bloodGroup.toLowerCase())) {
+                                obj.bloodGroup = "";
+                            }
+
+                            // Validate status
+                            if (!["alive", "deceased"].includes(obj.status)) {
+                                obj.status = "alive";
+                            }
+
+                            // Clear deathDate if status is alive
+                            if (obj.status === "alive") {
+                                obj.deathDate = "";
+                            }
+
+                            if (profiles.some(p => p.cnic === obj.cnic)) {
+                                duplicateProfiles.push(obj);
+                            } else {
+                                importedProfiles.push(obj);
+                            }
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 0));
                     }
 
-                    if (!["alive", "deceased"].includes(obj.status)) {
-                        obj.status = "alive";
+                    if (duplicateProfiles.length > 0) {
+                        showDuplicateAlert(`${duplicateProfiles.length} ڈوپلیکیٹ CNIC ملے: ${duplicateProfiles.map(p => p.cnic).join(", ")}`);
                     }
 
-                    if (obj.status === "alive") {
-                        obj.deathDate = "";
+                    if (importedProfiles.length > 0) {
+                        profiles = [...profiles, ...importedProfiles];
+                        saveProfiles();
+                        renderTree();
+                        alert(`${importedProfiles.length} نئے پروفائلز امپورٹ ہوئے!`);
+                    } else {
+                        alert("کوئی نئے پروفائلز امپورٹ نہیں ہوئے!");
                     }
 
-                    const response = await fetch(`${API_URL}/profiles`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'x-user': currentUser },
-                        body: JSON.stringify(obj)
-                    });
-
-                    if (response.status === 400 && (await response.json()).message.includes("CNIC already exists")) {
-                        duplicateProfiles.push(obj);
-                    } else if (response.ok) {
-                        importedProfiles.push(obj);
-                    }
+                    // Reset the file input
+                    fileInput.value = "";
+                } catch (e) {
+                    console.error("Error processing CSV:", e);
+                    alert("Error processing CSV: " + e.message);
                 }
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
+            };
 
-            if (duplicateProfiles.length > 0) {
-                showDuplicateAlert(`${duplicateProfiles.length} ڈوپلیکیٹ CNIC ملے: ${duplicateProfiles.map(p => p.cnic).join(", ")}`);
-            }
-
-            if (importedProfiles.length > 0) {
-                await fetchProfiles();
-                renderTree();
-                alert(`${importedProfiles.length} نئے پروفائلز امپورٹ ہوئے!`);
-            } else {
-                alert("کوئی نئے پروفائلز امپورٹ نہیں ہوئے!");
-            }
-
-            fileInput.value = "";
-        };
-
-        reader.onerror = function () {
-            console.error("Error reading file");
-            alert("Error reading CSV file!");
-        };
-        reader.readAsText(file);
+            reader.onerror = function () {
+                console.error("Error reading file");
+                alert("Error reading CSV file! Please ensure the file is accessible.");
+            };
+            reader.readAsText(file);
+        } catch (e) {
+            console.error("Error importing backup:", e);
+            alert("Error importing backup: " + e.message);
+        }
     }
 
     // DOM Content Loaded
-    document.addEventListener("DOMContentLoaded", async function () {
+    document.addEventListener("DOMContentLoaded", function () {
         try {
-            currentUser = localStorage.getItem("currentUser") || "";
+            checkPlanStatus();
             const loginBox = document.getElementById("loginBox");
             const app = document.getElementById("app");
 
+            // Bind importBackup to file input
             const importInput = document.getElementById("importBackup");
             if (importInput) {
                 importInput.addEventListener("change", importBackup);
+            } else {
+                console.warn("Import input element not found in DOM");
             }
 
             if (window.location.pathname.includes("funds.html")) {
@@ -1013,14 +1315,14 @@ try {
                 }
                 if (app) {
                     app.style.display = "block";
-                    await renderFunds();
+                    renderFunds();
                 }
             } else {
                 if (currentUser) {
                     if (loginBox) loginBox.style.display = "none";
                     if (app) {
                         app.style.display = "block";
-                        await renderTree();
+                        renderTree();
                     }
                 } else {
                     if (loginBox) loginBox.style.display = "block";
