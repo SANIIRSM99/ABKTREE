@@ -1,0 +1,136 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABK Family Funds</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>ABK Family Funds</h1>
+            <div class="header-actions">
+                <button class="btn-primary" onclick="window.location.href='index.html'">Back to Family Tree</button>
+                <button class="btn-secondary" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="funds-container">
+            <div class="fund-section">
+                <h2>Select Report Period</h2>
+                <select id="monthSelector" onchange="renderFunds()"></select>
+                <h3 id="dateRangeHeader"></h3>
+            </div>
+
+            <div class="fund-section">
+                <h2>Fund Received</h2>
+                <form id="fundReceiveForm">
+                    <input type="text" id="fundName" placeholder="Name" required>
+                    <input type="number" id="fundAmount" placeholder="Fund Amount" required>
+                    <input type="text" id="accountNumber" placeholder="Account Number" required>
+                    <select id="paymentMethod" required>
+                        <option value="NET CASH">NET CASH</option>
+                        <option value="EASYPAISA">EASYPAISA</option>
+                        <option value="JAZZ CASH">JAZZ CASH</option>
+                    </select>
+                    <button type="submit" class="btn-primary">Add Fund</button>
+                </form>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Fund Amount</th>
+                                <th>Account Number</th>
+                                <th>Payment Method</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fundReceiveBody"></tbody>
+                    </table>
+                </div>
+                <button class="btn-primary" onclick="exportFundReceivePDF()">Export Fund Receive PDF</button>
+            </div>
+
+            <div class="fund-section">
+                <h2>Fund Used</h2>
+                <form id="fundUseForm">
+                    <input type="text" id="fundPurpose" placeholder="Purpose" required>
+                    <input type="number" id="fundUsed" placeholder="Fund Amount" required>
+                    <button type="submit" class="btn-primary">Use Fund</button>
+                </form>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Purpose</th>
+                                <th>Fund Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fundUseBody"></tbody>
+                    </table>
+                </div>
+                <button class="btn-primary" onclick="exportFundUsePDF()">Export Fund Use PDF</button>
+            </div>
+
+            <div class="fund-section">
+                <h2>Summary</h2>
+                <p>Total Received: <span id="totalReceived">0</span></p>
+                <p>Total Used: <span id="totalUsed">0</span></p>
+                <p>Current Balance: <span id="currentBalance">0</span></p>
+            </div>
+        </div>
+
+        <footer class="app-footer">
+            Developed by SANI HASHMI | Mobile: 0311-7323373
+            <br>
+            © 2025 Sultan Abulkhair Shah Welfare Society (Jhang). All rights reserved.
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
